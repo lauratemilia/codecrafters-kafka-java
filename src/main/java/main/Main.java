@@ -21,8 +21,8 @@ public class Main {
        // Wait for connection from client.
        clientSocket = serverSocket.accept();
        OutputStream out = clientSocket.getOutputStream();
-       int msgSize = 0;
-       int correlationId = 7;
+       byte[] msgSize = new byte[] {0,0,0,0};
+       byte[] correlationId = new byte[] {0,0,0,7};;
        out.write(msgSize);
        out.write(correlationId);
      } catch (IOException e) {
