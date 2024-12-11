@@ -28,7 +28,7 @@ public class Main {
          out.write(msgSize);
        byte[] buffer = new byte[1024];
        if((in.read(buffer)) != -1){
-           byte[] output = new byte[]{0,0,0,0,0,0,0,0};
+           byte[] output = new byte[]{0,0,0,0};
            System.arraycopy(buffer, 4, output,0,4);
            out.write(output);
        } else {
