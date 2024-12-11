@@ -24,10 +24,11 @@ public class Main {
        clientSocket = serverSocket.accept();
        InputStream in = clientSocket.getInputStream();
        OutputStream out = clientSocket.getOutputStream();
+       out.write(new byte[]{0,0,0,0});
        byte[] buffer = new byte[1024];
        if((in.read(buffer)) != -1){
-           byte[] output = new byte[]{0,0,0,0,0,0,0,0};
-           System.arraycopy(buffer, 8, output,4,4);
+           byte[] output = new byte[]{0,0,0,0};
+           System.arraycopy(buffer, 8, output,0,4);
            out.write(output);
        } else {
            System.out.println("Nothing to read from input stream");
