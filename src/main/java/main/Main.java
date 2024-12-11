@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 public class Main {
@@ -24,17 +25,19 @@ public class Main {
        clientSocket = serverSocket.accept();
        InputStream in = clientSocket.getInputStream();
        OutputStream out = clientSocket.getOutputStream();
-       //message size
-       out.write(new byte[]{0,0,0,0});
-       byte[] buffer = new byte[1024];
-       if((in.read(buffer)) != -1){
-           //correlation id -> result in a full 8 bytes output like e.g. new byte[]{0,0,0,0,0,0,0,7}
-           byte[] output = new byte[]{0,0,0,0};
-           System.arraycopy(buffer, 8, output,0,4);
-           out.write(output);
-       } else {
-           System.out.println("Nothing to read from input stream");
+
+       byte[] length = in.readNBytes(4);
+       byte[] apiKey = in.readNBytes(2);
+       byte[] apiVersion = in.readNBytes(2);
+       short shortApiVersion = ByteBuffer.wrap(apiVersion).getShort();
+       System.out.println(shortApiVersion);
+       byte[] corrId = in.readNBytes(4);
+       out.write(length);
+       out.write(corrId);
+       if(shortApiVersion < 0 || shortApiVersion > 4){
+           out.write(new byte[]{0,35});
        }
+
      } catch (IOException e) {
        System.out.println("IOException: " + e.getMessage());
      } finally {
