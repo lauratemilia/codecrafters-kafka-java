@@ -1,9 +1,11 @@
 package main;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 public class Main {
   public static void main(String[] args){
@@ -20,11 +22,14 @@ public class Main {
        serverSocket.setReuseAddress(true);
        // Wait for connection from client.
        clientSocket = serverSocket.accept();
+       InputStream in = clientSocket.getInputStream();
+       byte[] corrId = new byte[]{};
+       int readIn = in.read(corrId, 4, 8);
+       System.out.printf(new String(corrId, StandardCharsets.UTF_8));
        OutputStream out = clientSocket.getOutputStream();
        byte[] msgSize = new byte[] {0,0,0,0};
-       byte[] correlationId = new byte[] {0,0,0,7};;
        out.write(msgSize);
-       out.write(correlationId);
+       out.write(corrId);
      } catch (IOException e) {
        System.out.println("IOException: " + e.getMessage());
      } finally {
