@@ -23,13 +23,17 @@ public class Main {
        // Wait for connection from client.
        clientSocket = serverSocket.accept();
        InputStream in = clientSocket.getInputStream();
-       byte[] corrId = new byte[]{};
-       int readIn = in.read(corrId, 4, 8);
-       System.out.printf(new String(corrId, StandardCharsets.UTF_8));
-       OutputStream out = clientSocket.getOutputStream();
-       byte[] msgSize = new byte[] {0,0,0,0};
-       out.write(msgSize);
-       out.write(corrId);
+         OutputStream out = clientSocket.getOutputStream();
+         byte[] msgSize = new byte[] {0,0,0,0};
+         out.write(msgSize);
+       byte[] buffer = new byte[1024];
+       if((in.read(buffer)) != -1){
+           byte[] output = new byte[]{0,0,0,0,0,0,0,0};
+           System.arraycopy(buffer, 8, output,4,4);
+           out.write(output);
+       } else {
+           System.out.println("Nothing to read from input stream");
+       }
      } catch (IOException e) {
        System.out.println("IOException: " + e.getMessage());
      } finally {
