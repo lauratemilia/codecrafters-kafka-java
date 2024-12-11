@@ -24,9 +24,11 @@ public class Main {
        clientSocket = serverSocket.accept();
        InputStream in = clientSocket.getInputStream();
        OutputStream out = clientSocket.getOutputStream();
+       //message size
        out.write(new byte[]{0,0,0,0});
        byte[] buffer = new byte[1024];
        if((in.read(buffer)) != -1){
+           //correlation id -> result in a full 8 bytes output like e.g. new byte[]{0,0,0,0,0,0,0,7}
            byte[] output = new byte[]{0,0,0,0};
            System.arraycopy(buffer, 8, output,0,4);
            out.write(output);
