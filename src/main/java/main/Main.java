@@ -28,7 +28,7 @@ public class Main {
          out.write(msgSize);
        byte[] buffer = new byte[1024];
        if((in.read(buffer)) != -1){
-           System.out.println(new String( in.readAllBytes(), StandardCharsets.UTF_8));
+           System.out.println(new String(buffer, StandardCharsets.UTF_8));
            byte[] output = new byte[]{0,0,0,0,0,0,0,0};
            System.arraycopy(buffer, 8, output,4,4);
            out.write(output);
