@@ -41,11 +41,6 @@ public class Main {
          // error code 16bit
          bos.write(new byte[] {0, 35});
      } else {
-         // error code 16bit
-         //    api_key => INT16
-         //    min_version => INT16
-         //    max_version => INT16
-         //  throttle_time_ms => INT32
          bos.write(new byte[] {0, 0});       // error code
          bos.write(2);                       // array size + 1
          bos.write(new byte[] {0, 18});      // api_key
