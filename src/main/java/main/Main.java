@@ -18,15 +18,15 @@ public class Main {
      ServerSocket serverSocket = null;
      Socket clientSocket = null;
      int port = 9092;
-     try ( InputStream in = clientSocket.getInputStream();
-           OutputStream out = clientSocket.getOutputStream();) {
+     try {
        serverSocket = new ServerSocket(port);
        // Since the tester restarts your program quite often, setting SO_REUSEADDR
        // ensures that we don't run into 'Address already in use' errors
        serverSocket.setReuseAddress(true);
        // Wait for connection from client.
        clientSocket = serverSocket.accept();
-
+     InputStream in = clientSocket.getInputStream();
+     OutputStream out = clientSocket.getOutputStream();
 
        in.readNBytes(4);
        byte[] apiKey = in.readNBytes(2);
