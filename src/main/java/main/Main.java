@@ -5,74 +5,90 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class Main {
+    private static final int PORT = 9092;
+    private static final int THREAD_POOL_SIZE = 4;
+
   public static void main(String[] args){
     // You can use print statements as follows for debugging, they'll be visible when running tests.
     System.err.println("Logs from your program will appear here!");
+    ExecutorService executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
-     ServerSocket serverSocket;
-     Socket clientSocket = null;
-     int port = 9092;
-     try {
-       serverSocket = new ServerSocket(port);
-       // Since the tester restarts your program quite often, setting SO_REUSEADDR
-       // ensures that we don't run into 'Address already in use' errors
+
+     try (ServerSocket serverSocket = new ServerSocket(PORT);) {
        serverSocket.setReuseAddress(true);
-       // Wait for connection from client.
-       clientSocket = serverSocket.accept();
-     DataInputStream in = new DataInputStream(clientSocket.getInputStream());
-     OutputStream out = clientSocket.getOutputStream();
 
-     while (true){
-        handleRequests(in, out);
-     }
+         while (true){
+             Socket clientSocket = serverSocket.accept();
+             executorService.submit(() -> handleClient(clientSocket));
+         }
 
      } catch (IOException e) {
        System.out.println("IOException: " + e.getMessage());
      } finally {
-       try {
-         if (clientSocket != null) {
-           clientSocket.close();
-         }
-       } catch (IOException e) {
-         System.out.println("IOException: " + e.getMessage());
-       }
+       executorService.shutdown();
      }
   }
 
-    private static void handleRequests(DataInputStream in, OutputStream out) throws IOException {
-        int msgSize = in.readInt(); //size
-        byte[] apiKey = in.readNBytes(2); // api key
-        short apiVersion =in.readShort();
-        byte[] corrId = in.readNBytes(4);
-        byte[] remainingBytes = new byte[msgSize - 8];
-        in.readFully(remainingBytes);
-
-        var bos = new ByteArrayOutputStream();
-        bos.write(corrId);
-        bos.write(getErrorCode(apiVersion)); //error code
-        bos.write(2);                     // array size + 1
-        bos.write(apiKey);                   // api_key
-        bos.write(new byte[] {0, 0});        // min version
-        bos.write(new byte[] {0, 4});        // max version
-        bos.write(0);                     // tagged fields
-        bos.write(new byte[] {0, 0, 0, 0});  // throttle time
-        // All requests and responses will end with a tagged field buffer.  If
-        // there are no tagged fields, this will only be a single zero byte.
-        bos.write(0); // tagged fields
-
-        byte[] sizeBytes = ByteBuffer.allocate(4).putInt(bos.size()).array();
-        var response = bos.toByteArray();
-        out.write(sizeBytes);
-        out.write(response);
-        out.flush();
+    private static void handleClient(Socket client) {
+      try(client){
+          while(true){
+              ByteBuffer request = processRequest(client.getInputStream());
+              if(request == null){
+                  break;
+              }
+              ByteBuffer response = getResponse(request);
+              respond(response, client.getOutputStream());
+          }
+      }catch (IOException e) {
+          System.out.println("IOException: " + e.getMessage());
+      } finally {
+          try {
+              if (client != null) {
+                  client.close();
+              }
+          } catch (IOException e) {
+              System.out.println("IOException: " + e.getMessage());
+          }
+      }
     }
 
-    private static byte[] getErrorCode(short apiVersion){
-        if (apiVersion < 0 || apiVersion > 4) {
-            return new byte[] {0, 35};
-        }
-        return (new byte[] {0, 0});
+    private static ByteBuffer processRequest(InputStream inputStream) throws IOException {
+        var length = ByteBuffer.wrap(inputStream.readNBytes(4)).getInt();
+        var payload = inputStream.readNBytes(length);
+        return ByteBuffer.allocate(length).put(payload).rewind();
     }
+
+    private static ByteBuffer getResponse(ByteBuffer request) throws IOException {
+        var apiKey = request.getShort();     // request_api_key
+        var apiVersion = request.getShort(); // request_api_version
+        var correlationId = request.getInt();
+        var errorCode = switch (apiKey) {
+            case 18 -> switch (apiVersion) {
+                case 0, 1, 2, 3, 4 -> 0;
+                default -> 35;
+            };
+            default -> -1;
+        };
+        return ByteBuffer.allocate(23)
+                .putInt(19)
+                .putInt(correlationId)
+                .putShort((short) errorCode)
+                .put((byte) 2) // response version
+                .putShort((short) 18) // api key
+                .putShort((short) 4) // api min version
+                .putShort((short) 4) // api max version
+                .putInt(0) // throttle time
+                .putShort((short) 0); // tagged fields
+    }
+
+    private static void respond(ByteBuffer response, OutputStream outputStream) throws IOException {
+        outputStream.write(response.array());
+        outputStream.flush();
+    }
+
 }
