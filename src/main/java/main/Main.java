@@ -18,33 +18,29 @@ public class Main {
      ServerSocket serverSocket = null;
      Socket clientSocket = null;
      int port = 9092;
-     try {
+     try ( InputStream in = clientSocket.getInputStream();
+           OutputStream out = clientSocket.getOutputStream();) {
        serverSocket = new ServerSocket(port);
        // Since the tester restarts your program quite often, setting SO_REUSEADDR
        // ensures that we don't run into 'Address already in use' errors
        serverSocket.setReuseAddress(true);
        // Wait for connection from client.
        clientSocket = serverSocket.accept();
-       InputStream in = clientSocket.getInputStream();
-       OutputStream out = clientSocket.getOutputStream();
 
-       byte[] length = in.readNBytes(4);
+
+       in.readNBytes(4);
        byte[] apiKey = in.readNBytes(2);
        byte[] apiVersion = in.readNBytes(2);
        short shortApiVersion = ByteBuffer.wrap(apiVersion).getShort();
        System.out.println(shortApiVersion);
        byte[] corrId = in.readNBytes(4);
      var bos = new ByteArrayOutputStream();
-     out.write(new byte[] {0, 0, 0, 8});
-     out.write(corrId);
      bos.write(corrId);
 
      if (shortApiVersion < 0 || shortApiVersion > 4) {
-         out.write(new byte[] {0, 35});
          // error code 16bit
          bos.write(new byte[] {0, 35});
      } else {
-         out.write(new byte[] {0, 0});
          // error code 16bit
          //    api_key => INT16
          //    min_version => INT16
