@@ -42,39 +42,35 @@ public class Main {
   }
 
     private static void handleRequests(DataInputStream in, OutputStream out) throws IOException {
-        int incomingMessageSize = in.readInt(); //size
-        byte[] requestApiKeyBytes = in.readNBytes(2); // api key
+        int msgSize = in.readInt(); //size
+        byte[] apiKey = in.readNBytes(2); // api key
         short apiVersion =in.readShort();
         byte[] corrId = in.readNBytes(4);
-        byte[] remainingBytes = new byte[incomingMessageSize - 8];
+        byte[] remainingBytes = new byte[msgSize - 8];
         in.readFully(remainingBytes);
 
         var bos = new ByteArrayOutputStream();
         bos.write(corrId);
-
-        bos.write(getErrorCode(apiVersion));
-        bos.write(2);                       // array size + 1
-        bos.write(requestApiKeyBytes);      // api_key
-        bos.write(new byte[] {0, 0});       // min version
-        bos.write(new byte[] {0, 4});       // max version
-        bos.write(0);                       // tagged fields
-        bos.write(new byte[] {0, 0, 0, 0}); // throttle time
+        bos.write(getErrorCode(apiVersion)); //error code
+        bos.write(2);                     // array size + 1
+        bos.write(apiKey);                   // api_key
+        bos.write(new byte[] {0, 0});        // min version
+        bos.write(new byte[] {0, 4});        // max version
+        bos.write(0);                     // tagged fields
+        bos.write(new byte[] {0, 0, 0, 0});  // throttle time
         // All requests and responses will end with a tagged field buffer.  If
         // there are no tagged fields, this will only be a single zero byte.
         bos.write(0); // tagged fields
-        int size = bos.size();
-        byte[] sizeBytes = ByteBuffer.allocate(4).putInt(size).array();
+
+        byte[] sizeBytes = ByteBuffer.allocate(4).putInt(bos.size()).array();
         var response = bos.toByteArray();
-        System.out.println("response size: " + Arrays.toString(sizeBytes));
-        System.out.println("response: " + Arrays.toString(response));
         out.write(sizeBytes);
         out.write(response);
-        //out.flush();
+        out.flush();
     }
 
-    static byte[] getErrorCode(short apiVersion){
+    private static byte[] getErrorCode(short apiVersion){
         if (apiVersion < 0 || apiVersion > 4) {
-            // error code 16bit
             return new byte[] {0, 35};
         }
         return (new byte[] {0, 0});
